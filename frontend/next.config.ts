@@ -2,15 +2,15 @@ const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
   async rewrites() {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://back-ecolink-3.onrender.com';
     
-    // Asegúrate de que la URL termine con /
+    // Asegúrate de que la URL no termine con /
     const formattedApiUrl = apiUrl.endsWith('/') ? apiUrl.slice(0, -1) : apiUrl;
     
     return [
       {
         source: '/api/:path*',
-        destination: `${formattedApiUrl}/api/:path*`,
+        destination: `${formattedApiUrl}/api/v1/:path*`, // Cambiado a /api/v1
       },
     ];
   },

@@ -61,7 +61,7 @@ const CategoriaSchema = z.object({
 })
 const CategoriaResponseSchema = z.union([CategoriaSchema, z.void()])
 
-const BASE_URL = process.env.NEXT_PUBLIC_DEFAULT_URL || "http://localhost:3000"
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"
 const API_URL = `${BASE_URL}/api`
 
 async function fetchWithErrorHandling<T>(

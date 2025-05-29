@@ -60,117 +60,130 @@ const CategoriaSchema = z.object({
 });
 const CategoriaResponseSchema = z.union([CategoriaSchema, z.void()]);
 
-// Usa la misma variable de entorno que en next.config.ts
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://back-ecolink-3.onrender.com";
-const API_URL = `${BASE_URL}/api/v1`; // Cambiado a /api/v1 para coincidir con el backend
+const API_URL = `${BASE_URL}/api/v1`;
 
 async function fetchWithErrorHandling<T>(
   url: string,
   options: RequestInit,
   schema: z.ZodType<T>,
   errorMessage: string,
+  retries = 2,
 ): Promise<ApiResponse<T>> {
-  try {
-    const response = await fetch(url, {
-      ...options,
-      // Añade un timeout para manejar el tiempo de reposo de Render
-      signal: AbortSignal.timeout(30000), // 30 segundos de timeout
-    });
-
-    if (!response.ok) {
-      let errorData: { error?: string; errors?: { field: string; message: string }[] } = {};
-      try {
-        errorData = await response.json();
-      } catch (e) {
-        console.error(`Failed to parse error response for ${url}:`, e);
-      }
-
-      console.log(`Error response from ${url}:`, { status: response.status, errorData });
-
-      switch (response.status) {
-        case 400:
-        case 409:
-          return {
-            success: false,
-            errors: errorData.errors || [
-              {
-                field: "general",
-                message: errorData.error || "Solicitud inválida. Verifica los datos enviados.",
-              },
-            ],
-          };
-        case 404:
-          return {
-            success: false,
-            errors: [
-              {
-                field: "general",
-                message: errorData.error || `${errorMessage} no encontrado.`,
-              },
-            ],
-          };
-        case 500:
-          return {
-            success: false,
-            errors: [
-              {
-                field: "general",
-                message: errorData.error || "Error interno del servidor. Intenta de nuevo más tarde.",
-              },
-            ],
-          };
-        default:
-          return {
-            success: false,
-            errors: [
-              {
-                field: "general",
-                message: errorData.error || `Error ${response.status}: ${response.statusText}`,
-              },
-            ],
-          };
-      }
-    }
-
-    if (response.status === 204) {
-      return {
-        success: true,
-        data: schema.parse(undefined) as T,
-      };
-    }
-
-    const data = await response.json();
-    console.log(`Response from ${url}:`, data);
-
+  for (let attempt = 1; attempt <= retries; attempt++) {
     try {
-      return {
-        success: true,
-        data: schema.parse(data),
-      };
+      const response = await fetch(url, {
+        ...options,
+        signal: AbortSignal.timeout(30000),
+      });
+
+      if (!response.ok) {
+        let errorData: { error?: string; errors?: { field: string; message: string }[] } = {};
+        try {
+          errorData = await response.json();
+        } catch (e) {
+          console.error(`Failed to parse error response for ${url}:`, e);
+        }
+
+        console.log(`Error response from ${url}:`, { status: response.status, errorData });
+
+        switch (response.status) {
+          case 400:
+          case 409:
+            return {
+              success: false,
+              errors: errorData.errors || [
+                {
+                  field: "general",
+                  message: errorData.error || "Solicitud inválida. Verifica los datos enviados.",
+                },
+              ],
+            };
+          case 404:
+            return {
+              success: false,
+              errors: [
+                {
+                  field: "general",
+                  message: errorData.error || `${errorMessage} no encontrado.`,
+                },
+              ],
+            };
+          case 500:
+            return {
+              success: false,
+              errors: [
+                {
+                  field: "general",
+                  message: errorData.error || "Error interno del servidor. Intenta de nuevo más tarde.",
+                },
+              ],
+            };
+          default:
+            return {
+              success: false,
+              errors: [
+                {
+                  field: "general",
+                  message: errorData.error || `Error ${response.status}: ${response.statusText}`,
+                },
+              ],
+            };
+        }
+      }
+
+      if (response.status === 204) {
+        return {
+          success: true,
+          data: schema.parse(undefined) as T,
+        };
+      }
+
+      const data = await response.json();
+      console.log(`Response from ${url}:`, data);
+
+      try {
+        return {
+          success: true,
+          data: schema.parse(data),
+        };
+      } catch (error) {
+        console.error(`Zod validation error for ${url}:`, error, "Response data:", data);
+        return {
+          success: false,
+          errors: [
+            {
+              field: "general",
+              message: "Error de validación de datos",
+            },
+          ],
+        };
+      }
     } catch (error) {
-      console.error(`Zod validation error for ${url}:`, error, "Response data:", data);
-      return {
-        success: false,
-        errors: [
-          {
-            field: "general",
-            message: "Error de validación de datos",
-          },
-        ],
-      };
+      console.error(`Fetch error for ${url}:`, error);
+      if (attempt === retries) {
+        return {
+          success: false,
+          errors: [
+            {
+              field: "general",
+              message: "Error de conexión o tiempo de espera agotado",
+            },
+          ],
+        };
+      }
+      await new Promise((resolve) => setTimeout(resolve, 1000));
     }
-  } catch (error) {
-    console.error(`Fetch error for ${url}:`, error);
-    return {
-      success: false,
-      errors: [
-        {
-          field: "general",
-          message: "Error de conexión o tiempo de espera agotado",
-        },
-      ],
-    };
   }
+  return {
+    success: false,
+    errors: [
+      {
+        field: "general",
+        message: "No se pudo completar la solicitud",
+      },
+    ],
+  };
 }
 
 export const fetchClientes = async (): Promise<Cliente[]> => {

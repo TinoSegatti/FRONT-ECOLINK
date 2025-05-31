@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import ClientesContainer from "./ClientesContainer"
 import useClientes from "../hooks/useClientes"
 import type { Cliente } from "../types"
@@ -31,6 +31,7 @@ export default function ClientesClient() {
   } = useClientes()
 
   const [showModal, setShowModal] = useState(false)
+  const [clientesFiltrados, setClientesFiltrados] = useState<Cliente[]>(clientes)
 
   const handleOpenModal = () => {
     iniciarCreacion()
@@ -79,6 +80,60 @@ export default function ClientesClient() {
       }
     }
   }
+
+  // Add this function to calculate filtered clients
+  const calcularClientesFiltrados = () => {
+    let resultado = [...clientes]
+
+    // Apply categorical filters
+    Object.entries(filtros).forEach(([columna, valores]) => {
+      if (valores instanceof Set && valores.size > 0) {
+        resultado = resultado.filter((cliente) => valores.has(String(cliente[columna as keyof Cliente])))
+      } else if (valores && typeof valores === "object" && "desde" in valores) {
+        // Handle date filters
+        const { desde, hasta } = valores as { desde: string; hasta: string }
+        if (desde || hasta) {
+          resultado = resultado.filter((cliente) => {
+            const fechaCliente = cliente[columna as keyof Cliente] as string
+            if (!fechaCliente) return false
+
+            const [day, month, year] = fechaCliente.split("/")
+            const fechaClienteObj = new Date(Number.parseInt(year), Number.parseInt(month) - 1, Number.parseInt(day))
+
+            if (desde) {
+              const [dayDesde, monthDesde, yearDesde] = desde.split("/")
+              const fechaDesde = new Date(
+                Number.parseInt(yearDesde),
+                Number.parseInt(monthDesde) - 1,
+                Number.parseInt(dayDesde),
+              )
+              if (fechaClienteObj < fechaDesde) return false
+            }
+
+            if (hasta) {
+              const [dayHasta, monthHasta, yearHasta] = hasta.split("/")
+              const fechaHasta = new Date(
+                Number.parseInt(yearHasta),
+                Number.parseInt(monthHasta) - 1,
+                Number.parseInt(dayHasta),
+              )
+              if (fechaClienteObj > fechaHasta) return false
+            }
+
+            return true
+          })
+        }
+      }
+    })
+
+    return resultado
+  }
+
+  // Add useEffect to update filtered clients when clientes or filtros change
+  useEffect(() => {
+    const filtrados = calcularClientesFiltrados()
+    setClientesFiltrados(filtrados)
+  }, [clientes, filtros])
 
   return (
     <div
@@ -138,7 +193,7 @@ export default function ClientesClient() {
                     <i className="bi bi-people-fill fs-4"></i>
                   </div>
                   <div className="text-start">
-                    <h3 className="mb-0 fw-bold">{clientes.length}</h3>
+                    <h3 className="mb-0 fw-bold">{clientesFiltrados.length}</h3>
                     <small className="opacity-90">Total</small>
                   </div>
                 </div>
@@ -169,7 +224,9 @@ export default function ClientesClient() {
                     <i className="bi bi-calendar-plus fs-4"></i>
                   </div>
                   <div className="text-start">
-                    <h3 className="mb-0 fw-bold">{clientes.filter((c) => c.prioridad === "PIDIO TURNO").length}</h3>
+                    <h3 className="mb-0 fw-bold">
+                      {clientesFiltrados.filter((c) => c.prioridad === "PIDIO TURNO").length}
+                    </h3>
                     <small className="opacity-90">Pidieron</small>
                   </div>
                 </div>
@@ -200,7 +257,9 @@ export default function ClientesClient() {
                     <i className="bi bi-check-circle-fill fs-4"></i>
                   </div>
                   <div className="text-start">
-                    <h3 className="mb-0 fw-bold">{clientes.filter((c) => c.estadoTurno === "CONFIRMADO").length}</h3>
+                    <h3 className="mb-0 fw-bold">
+                      {clientesFiltrados.filter((c) => c.estadoTurno === "CONFIRMADO").length}
+                    </h3>
                     <small className="opacity-90">Confirmados</small>
                   </div>
                 </div>
@@ -231,7 +290,7 @@ export default function ClientesClient() {
                     <i className="bi bi-graph-up fs-4"></i>
                   </div>
                   <div className="text-start">
-                    <h3 className="mb-0 fw-bold">{clientes.filter((c) => c.estado === "ACTIVO").length}</h3>
+                    <h3 className="mb-0 fw-bold">{clientesFiltrados.filter((c) => c.estado === "ACTIVO").length}</h3>
                     <small className="opacity-90">Activos</small>
                   </div>
                 </div>
@@ -257,22 +316,25 @@ export default function ClientesClient() {
               <div className="flex-grow-1">
                 <strong>Resumen de gestión:</strong>
                 <span className="ms-2">
-                  {clientes.filter((c) => c.prioridad === "PIDIO TURNO").length > 0 && (
+                  {clientesFiltrados.filter((c) => c.prioridad === "PIDIO TURNO").length > 0 && (
                     <span className="me-3">
                       <i className="bi bi-calendar-event me-1" style={{ color: "var(--accent-magenta)" }}></i>
-                      {clientes.filter((c) => c.prioridad === "PIDIO TURNO").length} solicitudes pendientes
+                      {clientesFiltrados.filter((c) => c.prioridad === "PIDIO TURNO").length} solicitudes pendientes
                     </span>
                   )}
-                  {clientes.filter((c) => c.estadoTurno === "CONFIRMADO").length > 0 && (
+                  {clientesFiltrados.filter((c) => c.estadoTurno === "CONFIRMADO").length > 0 && (
                     <span className="me-3">
                       <i className="bi bi-check-circle me-1" style={{ color: "var(--accent-cyan)" }}></i>
-                      {clientes.filter((c) => c.estadoTurno === "CONFIRMADO").length} turnos programados
+                      {clientesFiltrados.filter((c) => c.estadoTurno === "CONFIRMADO").length} turnos programados
                     </span>
                   )}
                   <span>
                     <i className="bi bi-percent me-1" style={{ color: "var(--accent-blue-gray)" }}></i>
-                    {clientes.length > 0
-                      ? Math.round((clientes.filter((c) => c.estado === "ACTIVO").length / clientes.length) * 100)
+                    {clientesFiltrados.length > 0
+                      ? Math.round(
+                          (clientesFiltrados.filter((c) => c.estado === "ACTIVO").length / clientesFiltrados.length) *
+                            100,
+                        )
                       : 0}
                     % de clientes activos
                   </span>

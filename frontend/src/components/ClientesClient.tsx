@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import ClientesContainer from "./ClientesContainer"
 import useClientes from "../hooks/useClientes"
 import type { Cliente } from "../types"
@@ -82,7 +82,7 @@ export default function ClientesClient() {
   }
 
   // Add this function to calculate filtered clients
-  const calcularClientesFiltrados = () => {
+  const calcularClientesFiltrados = useCallback(() => {
     let resultado = [...clientes]
 
     // Apply categorical filters
@@ -127,13 +127,13 @@ export default function ClientesClient() {
     })
 
     return resultado
-  }
+  }, [clientes, filtros])
 
   // Add useEffect to update filtered clients when clientes or filtros change
   useEffect(() => {
     const filtrados = calcularClientesFiltrados()
     setClientesFiltrados(filtrados)
-  }, [clientes, filtros])
+  }, [calcularClientesFiltrados])
 
   return (
     <div
@@ -225,7 +225,7 @@ export default function ClientesClient() {
                   </div>
                   <div className="text-start">
                     <h3 className="mb-0 fw-bold">
-                      {clientesFiltrados.filter((c) => c.prioridad === "PIDIO TURNO").length}
+                      {clientesFiltrados.filter((c) => c.prioridad === "Pidio turno").length}
                     </h3>
                     <small className="opacity-90">Pidieron</small>
                   </div>
@@ -258,7 +258,7 @@ export default function ClientesClient() {
                   </div>
                   <div className="text-start">
                     <h3 className="mb-0 fw-bold">
-                      {clientesFiltrados.filter((c) => c.estadoTurno === "CONFIRMADO").length}
+                      {clientesFiltrados.filter((c) => c.estadoTurno === "Confirmado").length}
                     </h3>
                     <small className="opacity-90">Confirmados</small>
                   </div>
@@ -290,7 +290,7 @@ export default function ClientesClient() {
                     <i className="bi bi-graph-up fs-4"></i>
                   </div>
                   <div className="text-start">
-                    <h3 className="mb-0 fw-bold">{clientesFiltrados.filter((c) => c.estado === "ACTIVO").length}</h3>
+                    <h3 className="mb-0 fw-bold">{clientesFiltrados.filter((c) => c.estado === "Activo").length}</h3>
                     <small className="opacity-90">Activos</small>
                   </div>
                 </div>
@@ -316,23 +316,23 @@ export default function ClientesClient() {
               <div className="flex-grow-1">
                 <strong>Resumen de gestión:</strong>
                 <span className="ms-2">
-                  {clientesFiltrados.filter((c) => c.prioridad === "PIDIO TURNO").length > 0 && (
+                  {clientesFiltrados.filter((c) => c.prioridad === "Pidio turno").length > 0 && (
                     <span className="me-3">
                       <i className="bi bi-calendar-event me-1" style={{ color: "var(--accent-magenta)" }}></i>
-                      {clientesFiltrados.filter((c) => c.prioridad === "PIDIO TURNO").length} solicitudes pendientes
+                      {clientesFiltrados.filter((c) => c.prioridad === "Pidio turno").length} solicitudes pendientes
                     </span>
                   )}
-                  {clientesFiltrados.filter((c) => c.estadoTurno === "CONFIRMADO").length > 0 && (
+                  {clientesFiltrados.filter((c) => c.estadoTurno === "Confirmado").length > 0 && (
                     <span className="me-3">
                       <i className="bi bi-check-circle me-1" style={{ color: "var(--accent-cyan)" }}></i>
-                      {clientesFiltrados.filter((c) => c.estadoTurno === "CONFIRMADO").length} turnos programados
+                      {clientesFiltrados.filter((c) => c.estadoTurno === "Confirmado").length} turnos programados
                     </span>
                   )}
                   <span>
                     <i className="bi bi-percent me-1" style={{ color: "var(--accent-blue-gray)" }}></i>
                     {clientesFiltrados.length > 0
                       ? Math.round(
-                          (clientesFiltrados.filter((c) => c.estado === "ACTIVO").length / clientesFiltrados.length) *
+                          (clientesFiltrados.filter((c) => c.estado === "Activo").length / clientesFiltrados.length) *
                             100,
                         )
                       : 0}

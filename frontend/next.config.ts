@@ -1,6 +1,5 @@
 const nextConfig = {
   reactStrictMode: true,
-  swcMinify: true,
   async rewrites() {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://back-ecolink-3.onrender.com';
     

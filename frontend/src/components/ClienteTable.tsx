@@ -188,13 +188,17 @@ export default function ClienteTable({
         }
     }, [])
 
-    const sortedClientes = [...clientes].sort((a, b) => {
-        if (a.estado === "INACTIVO" && b.estado !== "INACTIVO") return 1
-        if (a.estado !== "INACTIVO" && b.estado === "INACTIVO") return -1
-        if (a.estado === "BAJA" && b.estado !== "BAJA") return 1
-        if (a.estado !== "BAJA" && b.estado === "BAJA") return -1
-        return 0
-    })
+   const sortedClientes = [...clientes].sort((a, b) => {
+    // Convertir a mayúsculas para comparación case-insensitive
+    const estadoA = a.estado?.toUpperCase()
+    const estadoB = b.estado?.toUpperCase()
+    
+    if (estadoA === "INACTIVO" && estadoB !== "INACTIVO") return 1
+    if (estadoA !== "INACTIVO" && estadoB === "INACTIVO") return -1
+    if (estadoA === "BAJA" && estadoB !== "BAJA") return 1
+    if (estadoA !== "BAJA" && estadoB === "BAJA") return -1
+    return 0
+})
 
     const toggleFiltro = (columna: keyof Cliente) => {
         setFiltroAbierto(filtroAbierto === columna ? null : columna)

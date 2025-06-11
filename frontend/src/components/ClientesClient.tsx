@@ -329,7 +329,7 @@ export default function ClientesClient() {
                     </span>
                   )}
                   <span>
-                    <i className="bi bi-percent me-1" style={{ color: "var(--accent-blue-gray)" }}></i>
+                    <i></i>
                     {clientesFiltrados.length > 0
                       ? Math.round(
                           (clientesFiltrados.filter((c) => c.estado === "Activo").length / clientesFiltrados.length) *

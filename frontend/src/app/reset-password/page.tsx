@@ -4,6 +4,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import ResetPasswordForm from "../../components/auth/ResetPasswordForm";
 import { useAuthContext } from "../../contexts/AuthContext";
+import React, { Suspense } from "react";
+
 
 export default function ResetPasswordPage() {
   useAuthContext();
@@ -33,12 +35,14 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <div className="container py-5">
-      <div className="row justify-content-center">
-        <div className="col-md-6 col-lg-4">
-          <ResetPasswordForm token={token} onSuccess={handleSuccess} />
+    <Suspense fallback={<div>Cargando...</div>}>
+      <div className="container py-5">
+        <div className="row justify-content-center">
+          <div className="col-md-6 col-lg-4">
+            <ResetPasswordForm token={token} onSuccess={handleSuccess} />
+          </div>
         </div>
       </div>
-    </div>
+    </Suspense>
   );
 }

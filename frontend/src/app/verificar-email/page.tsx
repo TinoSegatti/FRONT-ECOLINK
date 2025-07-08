@@ -4,8 +4,9 @@ import { useEffect, useState, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useAuthContext } from "../../contexts/AuthContext";
 import EmailVerification from "../../components/auth/EmailVerification";
+import React, { Suspense } from "react";
 
-export default function VerificarEmailPage() {
+function VerificarEmailPageContent() {
   const searchParams = useSearchParams();
   const { verificarEmail } = useAuthContext();
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
@@ -53,5 +54,13 @@ export default function VerificarEmailPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function VerificarEmailPage() {
+  return (
+    <Suspense fallback={<div>Cargando...</div>}>
+      <VerificarEmailPageContent />
+    </Suspense>
   );
 }

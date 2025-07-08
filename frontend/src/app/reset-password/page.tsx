@@ -7,7 +7,7 @@ import { useAuthContext } from "../../contexts/AuthContext";
 import React, { Suspense } from "react";
 
 
-export default function ResetPasswordPage() {
+function ResetPasswordPageContent() {
   useAuthContext();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -35,14 +35,20 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <Suspense fallback={<div>Cargando...</div>}>
-      <div className="container py-5">
-        <div className="row justify-content-center">
-          <div className="col-md-6 col-lg-4">
-            <ResetPasswordForm token={token} onSuccess={handleSuccess} />
-          </div>
+    <div className="container py-5">
+      <div className="row justify-content-center">
+        <div className="col-md-6 col-lg-4">
+          <ResetPasswordForm token={token} onSuccess={handleSuccess} />
         </div>
       </div>
+    </div>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={<div>Cargando...</div>}>
+      <ResetPasswordPageContent />
     </Suspense>
   );
 }

@@ -1,18 +1,13 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import {
-  type Cliente,
-  defaultCliente,
-  type GestionableFieldKey,
-  type GestionableField,
-  type ColumnasFiltrables,
-} from "../types"
+import { useState, useEffect, useCallback } from "react"
+import type { Cliente, GestionableFieldKey, GestionableField, ColumnasFiltrables } from "../types"
+import { defaultCliente } from "../types"
 import {
   fetchClientes,
   crearCliente,
-  eliminarCliente,
   actualizarCliente,
+  eliminarCliente,
   fetchCategorias,
   crearCategoria,
   editarCategoria,
@@ -21,6 +16,10 @@ import {
 
 export default function useClientes() {
   const [clientes, setClientes] = useState<Cliente[]>([])
+  const [clientesFiltrados, setClientesFiltrados] = useState<Cliente[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [nuevoCliente, setNuevoCliente] = useState<Omit<Cliente, "id">>(defaultCliente)
+  const [clienteEditando, setClienteEditando] = useState<Cliente | null>(null)
   const [gestionFields, setGestionFields] = useState<Record<GestionableFieldKey, GestionableField>>({
     zona: { options: [] },
     semana: { options: [] },
@@ -30,138 +29,187 @@ export default function useClientes() {
     estado: { options: [] },
     gestionComercial: { options: [] },
   })
-  const [nuevoCliente, setNuevoCliente] = useState<Omit<Cliente, "id">>({ ...defaultCliente, localidad: null })
-  const [clienteEditando, setClienteEditando] = useState<Cliente | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const [filtros, setFiltros] = useState<
-    Record<ColumnasFiltrables, Set<string>> &
-      Partial<Record<"fechaDeuda" | "ultimaRecoleccion" | "contratacion", { desde: string; hasta: string }>>
-  >(() => ({
-    zona: new Set<string>(),
-    semana: new Set<string>(),
-    tipoCliente: new Set<string>(),
-    estadoTurno: new Set<string>(),
-    prioridad: new Set<string>(),
-    estado: new Set<string>(),
-    gestionComercial: new Set<string>(),
+
+  // Estados para filtros
+  const [filtros, setFiltros] = useState<Record<ColumnasFiltrables, Set<string>>>({
+    zona: new Set(),
+    semana: new Set(),
+    tipoCliente: new Set(),
+    estadoTurno: new Set(),
+    prioridad: new Set(),
+    estado: new Set(),
+    gestionComercial: new Set(),
+  })
+
+  const [filtrosFecha, setFiltrosFecha] = useState<
+    Record<"fechaDeuda" | "ultimaRecoleccion" | "contratacion", { desde: string; hasta: string }>
+  >({
     fechaDeuda: { desde: "", hasta: "" },
     ultimaRecoleccion: { desde: "", hasta: "" },
     contratacion: { desde: "", hasta: "" },
-  }))
-  const [categoriaError, setCategoriaError] = useState<string | null>(null)
+  })
 
-  const loadClientes = async () => {
-    setIsLoading(true)
-    try {
-      const data = await fetchClientes()
-      console.log(
-        "Datos crudos de clientes:",
-        data.map((cliente) => ({
-          id: cliente.id,
-          nombre: cliente.nombre,
-          fechaDeuda: cliente.fechaDeuda,
-          ultimaRecoleccion: cliente.ultimaRecoleccion,
-          contratacion: cliente.contratacion,
-        })),
-      )
-      setClientes(data)
-    } catch (error) {
-      console.error("Error al cargar clientes:", error)
-    } finally {
-      setIsLoading(false)
+  // Cargar datos iniciales
+  useEffect(() => {
+    const loadData = async () => {
+      setIsLoading(true)
+      try {
+        // Cargar clientes
+        const clientesData = await fetchClientes()
+        setClientes(clientesData)
+        setClientesFiltrados(clientesData)
+
+        // Cargar categorías para cada campo gestionable
+        const fieldsToLoad: GestionableFieldKey[] = [
+          "zona",
+          "semana",
+          "tipoCliente",
+          "estadoTurno",
+          "prioridad",
+          "estado",
+          "gestionComercial",
+        ]
+
+        const gestionFieldsData: Record<GestionableFieldKey, GestionableField> = {
+          zona: { options: [] },
+          semana: { options: [] },
+          tipoCliente: { options: [] },
+          estadoTurno: { options: [] },
+          prioridad: { options: [] },
+          estado: { options: [] },
+          gestionComercial: { options: [] },
+        }
+
+        for (const field of fieldsToLoad) {
+          try {
+            const options = await fetchCategorias(field)
+            gestionFieldsData[field] = { options }
+          } catch (error) {
+            console.error(`Error loading categories for ${field}:`, error)
+            gestionFieldsData[field] = { options: [] }
+          }
+        }
+
+        setGestionFields(gestionFieldsData)
+      } catch (error) {
+        console.error("Error loading data:", error)
+      } finally {
+        setIsLoading(false)
+      }
     }
-  }
 
-  const loadCategorias = async (field: GestionableFieldKey) => {
-    try {
-      const options = await fetchCategorias(field)
-      setGestionFields((prev) => ({ ...prev, [field]: { options } }))
-    } catch (error) {
-      console.error(`Error al cargar categorías para ${field}:`, error)
-    }
-  }
+    loadData()
+  }, [])
 
-  const iniciarCreacion = () => {
-    setNuevoCliente({ ...defaultCliente, localidad: null })
-    setCategoriaError(null)
-  }
+  // Aplicar filtros
+  useEffect(() => {
+    let filtered = [...clientes]
 
-  const handleCrearCliente = async (): Promise<{ success: boolean; errors?: { field: string; message: string }[] }> => {
+    // Aplicar filtros categóricos
+    Object.entries(filtros).forEach(([campo, valores]) => {
+      if (valores.size > 0) {
+        filtered = filtered.filter((cliente) => {
+          const valorCliente = cliente[campo as keyof Cliente]
+          return valores.has(String(valorCliente || ""))
+        })
+      }
+    })
+
+    // Aplicar filtros de fecha
+    Object.entries(filtrosFecha).forEach(([campo, rango]) => {
+      if (rango.desde || rango.hasta) {
+        filtered = filtered.filter((cliente) => {
+          const fechaCliente = cliente[campo as keyof Cliente] as string
+          if (!fechaCliente) return false
+
+          const [dia, mes, año] = fechaCliente.split("/")
+          const fechaClienteObj = new Date(Number.parseInt(año), Number.parseInt(mes) - 1, Number.parseInt(dia))
+
+          let cumpleFiltro = true
+
+          if (rango.desde) {
+            const [diaDesde, mesDesde, añoDesde] = rango.desde.split("/")
+            const fechaDesde = new Date(
+              Number.parseInt(añoDesde),
+              Number.parseInt(mesDesde) - 1,
+              Number.parseInt(diaDesde),
+            )
+            cumpleFiltro = cumpleFiltro && fechaClienteObj >= fechaDesde
+          }
+
+          if (rango.hasta) {
+            const [diaHasta, mesHasta, añoHasta] = rango.hasta.split("/")
+            const fechaHasta = new Date(
+              Number.parseInt(añoHasta),
+              Number.parseInt(mesHasta) - 1,
+              Number.parseInt(diaHasta),
+            )
+            cumpleFiltro = cumpleFiltro && fechaClienteObj <= fechaHasta
+          }
+
+          return cumpleFiltro
+        })
+      }
+    })
+
+    setClientesFiltrados(filtered)
+  }, [clientes, filtros, filtrosFecha])
+
+  // Funciones de gestión de clientes
+  const handleCrearCliente = async () => {
     try {
       const response = await crearCliente(nuevoCliente)
-
-      if (!response.success) {
-        return {
-          success: false,
-          errors: response.errors,
-        }
+      if (response.success && response.data) {
+        setClientes((prev) => [...prev, response.data!])
+        setNuevoCliente(defaultCliente)
+        return { success: true }
+      } else {
+        return { success: false, errors: response.errors }
       }
-
-      setNuevoCliente({ ...defaultCliente, localidad: null })
-      await loadClientes()
-      setCategoriaError(null)
-
-      return { success: true }
-    } catch (error: unknown) {
-      console.error("Error al crear cliente:", error)
-      return {
-        success: false,
-        errors: [{ field: "general", message: "Error inesperado al crear el cliente" }],
-      }
+    } catch (error) {
+      console.error("Error creating client:", error)
+      return { success: false, errors: [{ field: "general", message: "Error al crear cliente" }] }
     }
   }
 
-  const handleActualizarCliente = async (id: number, data: Omit<Cliente, "id">): Promise<{ success: boolean; errors?: { field: string; message: string }[] }> => {
+  const handleActualizarCliente = async (id: number, data: Partial<Cliente>) => {
     try {
       const response = await actualizarCliente(id, data)
-      if (!response.success) {
-        return {
-          success: false,
-          errors: response.errors,
-        }
+      if (response.success && response.data) {
+        setClientes((prev) => prev.map((cliente) => (cliente.id === id ? response.data! : cliente)))
+        setClienteEditando(null)
+        return { success: true }
+      } else {
+        return { success: false, errors: response.errors }
       }
-      setClienteEditando(null)
-      await loadClientes()
-      setCategoriaError(null)
-      return { success: true }
-    } catch (error: unknown) {
-      console.error("Error al actualizar cliente:", error)
-      return {
-        success: false,
-        errors: [{ field: "general", message: "Error inesperado al actualizar el cliente" }],
-      }
+    } catch (error) {
+      console.error("Error updating client:", error)
+      return { success: false, errors: [{ field: "general", message: "Error al actualizar cliente" }] }
     }
   }
 
   const handleEliminarCliente = async (id: number) => {
     try {
       await eliminarCliente(id)
-      await loadClientes()
-      setCategoriaError(null)
-    } catch (error: unknown) {
-      console.error("Error al eliminar cliente:", error)
-      throw error instanceof Error ? error : new Error("Error al eliminar el cliente")
+      setClientes((prev) => prev.filter((cliente) => cliente.id !== id))
+    } catch (error) {
+      console.error("Error deleting client:", error)
+      throw error
     }
   }
 
-  const iniciarEdicion = (cliente: Cliente) => {
-    setClienteEditando({ ...cliente, localidad: null })
-    setCategoriaError(null)
-  }
-
-  const cancelarEdicion = () => {
-    setClienteEditando(null)
-    setCategoriaError(null)
-  }
-
+  // Funciones de gestión de categorías
   const handleCrearCategoria = async (field: GestionableFieldKey, valor: string, color?: string) => {
     try {
       await crearCategoria(field, valor, color)
-      await loadCategorias(field)
-      setCategoriaError(null)
-    } catch (error: unknown) {
-      console.error("Error al crear categoría:", error)
-      throw error instanceof Error ? error : new Error("Error al crear la categoría")
+      const options = await fetchCategorias(field)
+      setGestionFields((prev) => ({
+        ...prev,
+        [field]: { options },
+      }))
+    } catch (error) {
+      console.error("Error creating category:", error)
+      throw error
     }
   }
 
@@ -173,198 +221,102 @@ export default function useClientes() {
   ) => {
     try {
       await editarCategoria(field, oldValor, newValor, color)
-      await loadClientes()
-      await loadCategorias(field)
-      setCategoriaError(null)
-    } catch (error: unknown) {
-      console.error("Error al editar categoría:", error)
-      throw error instanceof Error ? error : new Error("Error al editar la categoría")
+      const options = await fetchCategorias(field)
+      setGestionFields((prev) => ({
+        ...prev,
+        [field]: { options },
+      }))
+    } catch (error) {
+      console.error("Error editing category:", error)
+      throw error
     }
   }
 
   const handleEliminarCategoria = async (field: GestionableFieldKey, valor: string) => {
     try {
-      const today = new Date()
-      const deleteAt = `${String(today.getDate()).padStart(2, "0")}/${String(today.getMonth() + 1).padStart(2, "0")}/${today.getFullYear()}`
-      await eliminarCategoria(field, valor, deleteAt)
-      await loadClientes()
-      await loadCategorias(field)
-      setCategoriaError(null)
-    } catch (error: unknown) {
-      console.error("Error al eliminar categoría:", error)
-      if (error instanceof Error) {
-        try {
-          const parsedError = JSON.parse(error.message)
-          const errorMessage = parsedError.errors?.[0]?.message || error.message
-          setCategoriaError(errorMessage)
-        } catch {
-          setCategoriaError(error.message)
-        }
-      } else {
-        setCategoriaError("Error al eliminar la categoría")
-      }
-      throw error
+      const today = new Date();
+      const deleteAt = `${today.getDate().toString().padStart(2, "0")}/${(today.getMonth() + 1)
+        .toString()
+        .padStart(2, "0")}/${today.getFullYear()}`;
+      await eliminarCategoria(field, valor, deleteAt);
+      const options = await fetchCategorias(field);
+      setGestionFields((prev) => ({
+        ...prev,
+        [field]: { options },
+      }));
+    } catch (error) {
+      console.error("Error deleting category:", error);
+      throw error;
     }
-  }
+  };
 
-  const clearCategoriaError = () => {
-    setCategoriaError(null)
-  }
-
-  const handleFiltroCategoricalChange = (columna: ColumnasFiltrables, valor: string, checked: boolean) => {
+  // Funciones de filtrado
+  const handleFiltroCategoricalChange = useCallback((columna: ColumnasFiltrables, valor: string, checked: boolean) => {
     setFiltros((prev) => {
       const newFiltros = { ...prev }
-      const newSet = new Set(prev[columna] as Set<string>)
       if (checked) {
-        newSet.add(valor)
+        newFiltros[columna].add(valor)
       } else {
-        newSet.delete(valor)
+        newFiltros[columna].delete(valor)
       }
-      newFiltros[columna] = newSet
       return newFiltros
     })
-  }
+  }, [])
 
-  const handleFiltroFechaChange = (
-    columna: "fechaDeuda" | "ultimaRecoleccion" | "contratacion",
-    valor: { desde: string; hasta: string },
-    checked: boolean,
-  ) => {
-    console.log(`Llamada a handleFiltroFechaChange para ${columna}:`, { valor, checked })
-    setFiltros((prev) => {
-      const newFiltros = { ...prev }
-      if (checked && (valor.desde || valor.hasta)) {
-        newFiltros[columna] = { desde: valor.desde.trim(), hasta: valor.hasta.trim() }
-      } else {
-        newFiltros[columna] = { desde: "", hasta: "" }
-      }
-      console.log("Nuevo estado de filtros:", {
-        fechaDeuda: newFiltros.fechaDeuda,
-        ultimaRecoleccion: newFiltros.ultimaRecoleccion,
-        contratacion: newFiltros.contratacion,
-      })
-      return newFiltros
-    })
-  }
-
-  const limpiarTodosLosFiltros = () => {
-    setFiltros({
-      zona: new Set<string>(),
-      semana: new Set<string>(),
-      tipoCliente: new Set<string>(),
-      estadoTurno: new Set<string>(),
-      prioridad: new Set<string>(),
-      estado: new Set<string>(),
-      gestionComercial: new Set<string>(),
-    })
-  }
-
-  const getUniqueValues = (columna: keyof Cliente): string[] => {
-    return Array.from(new Set(clientes.map((c) => String(c[columna] ?? "")))).sort()
-  }
-
-  console.log("Estado de filtros antes de filtrar:", {
-    fechaDeuda: filtros.fechaDeuda,
-    ultimaRecoleccion: filtros.ultimaRecoleccion,
-    contratacion: filtros.contratacion,
-  })
-
-  const clientesFiltrados = clientes.filter((cliente) => {
-    console.log("Evaluando cliente:", {
-      id: cliente.id,
-      nombre: cliente.nombre,
-      fechaDeuda: cliente.fechaDeuda,
-      ultimaRecoleccion: cliente.ultimaRecoleccion,
-      contratacion: cliente.contratacion,
-    })
-    return Object.entries(filtros).every(([col, filtro]) => {
-      if (["fechaDeuda", "ultimaRecoleccion", "contratacion"].includes(col)) {
-        const { desde, hasta } = filtro as { desde: string; hasta: string }
-        console.log(`Filtrando ${col}:`, { desde, hasta, valorCliente: cliente[col as keyof Cliente] })
-        if (!desde && !hasta) {
-          console.log(`No hay filtro activo para ${col}`)
-          return true
-        }
-        const fecha = cliente[col as keyof Cliente] as string | null
-        if (!fecha) {
-          console.log(`Cliente sin fecha para ${col}, excluyendo`)
-          return false
-        }
-        const parseDate = (dateStr: string): Date | null => {
-          const match = dateStr.match(/^(\d{2})\/(\d{2})\/(\d{4})$/)
-          if (!match) {
-            console.warn(`Formato de fecha inválido: ${dateStr}`)
-            return null
-          }
-          const [, day, month, year] = match
-          const date = new Date(Number(year), Number(month) - 1, Number(day))
-          if (isNaN(date.getTime())) {
-            console.warn(`Fecha inválida: ${dateStr}`)
-            return null
-          }
-          return date
-        }
-        const fechaDate = parseDate(fecha)
-        if (!fechaDate) return false
-        const desdeDate = desde ? parseDate(desde) : null
-        const hastaDate = hasta ? parseDate(hasta) : null
-        if (desde && !desdeDate) {
-          console.warn(`Fecha 'desde' inválida para ${col}:`, desde)
-          return false
-        }
-        if (hasta && !hastaDate) {
-          console.warn(`Fecha 'hasta' inválida para ${col}:`, hasta)
-          return false
-        }
-        const result = (!desdeDate || fechaDate >= desdeDate) && (!hastaDate || fechaDate <= hastaDate)
-        console.log(`Resultado del filtro para ${col}:`, result, {
-          fecha: fechaDate.toISOString(),
-          desde: desdeDate?.toISOString() || "N/A",
-          hasta: hastaDate?.toISOString() || "N/A",
-        })
-        return result
-      } else {
-        const valores = filtro as Set<string>
-        if (valores.size === 0) return true
-        const valor = cliente[col as keyof Cliente] ?? "N/A"
-        return valores.has(String(valor))
-      }
-    })
-  })
-
-  console.log(
-    "Clientes filtrados:",
-    clientesFiltrados.map((c) => ({
-      id: c.id,
-      nombre: c.nombre,
-      fechaDeuda: c.fechaDeuda,
-    })),
+  const handleFiltroFechaChange = useCallback(
+    (
+      columna: "fechaDeuda" | "ultimaRecoleccion" | "contratacion",
+      valor: { desde: string; hasta: string },
+      checked: boolean,
+    ) => {
+      setFiltrosFecha((prev) => ({
+        ...prev,
+        [columna]: checked ? valor : { desde: "", hasta: "" },
+      }))
+    },
+    [],
   )
 
-  useEffect(() => {
-    let isMounted = true
+  const limpiarTodosLosFiltros = useCallback(() => {
+    setFiltros({
+      zona: new Set(),
+      semana: new Set(),
+      tipoCliente: new Set(),
+      estadoTurno: new Set(),
+      prioridad: new Set(),
+      estado: new Set(),
+      gestionComercial: new Set(),
+    })
+    setFiltrosFecha({
+      fechaDeuda: { desde: "", hasta: "" },
+      ultimaRecoleccion: { desde: "", hasta: "" },
+      contratacion: { desde: "", hasta: "" },
+    })
+  }, [])
 
-    const loadInitialData = async () => {
-      try {
-        await loadClientes()
-        if (isMounted) {
-          await Promise.all(Object.keys(gestionFields).map((field) => loadCategorias(field as GestionableFieldKey)))
-        }
-      } catch (error) {
-        console.error("Error en la carga inicial:", error)
-      }
-    }
+  const getUniqueValues = useCallback(
+    (columna: keyof Cliente): string[] => {
+      const valores = clientes.map((cliente) => String(cliente[columna] || "")).filter((valor) => valor !== "")
+      return [...new Set(valores)].sort()
+    },
+    [clientes],
+  )
 
-    loadInitialData()
+  // Funciones de edición
+  const iniciarCreacion = useCallback(() => {
+    setNuevoCliente(defaultCliente)
+  }, [])
 
-    return () => {
-      isMounted = false
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const iniciarEdicion = useCallback((cliente: Cliente) => {
+    setClienteEditando(cliente)
+  }, [])
+
+  const cancelarEdicion = useCallback(() => {
+    setClienteEditando(null)
   }, [])
 
   return {
-    clientes: clientesFiltrados,
+    clientes: clientesFiltrados, // Devolver clientes filtrados
     gestionFields,
     nuevoCliente,
     setNuevoCliente,
@@ -379,9 +331,10 @@ export default function useClientes() {
     handleCrearCategoria,
     handleEditarCategoria,
     handleEliminarCategoria,
-    categoriaError,
-    clearCategoriaError,
-    filtros,
+    filtros: {
+      ...filtros,
+      ...filtrosFecha,
+    },
     handleFiltroCategoricalChange,
     handleFiltroFechaChange,
     limpiarTodosLosFiltros,

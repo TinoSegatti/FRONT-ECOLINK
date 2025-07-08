@@ -28,6 +28,8 @@ interface ClientesContainerProps {
   cancelarEdicion: () => void
   clienteEditando: Cliente | null
   handleOpenModal: () => void
+  canCreateEdit: boolean
+  canManageCategories: boolean
 }
 
 export default function ClientesContainer({
@@ -52,10 +54,16 @@ export default function ClientesContainer({
   cancelarEdicion,
   clienteEditando,
   handleOpenModal,
+  canCreateEdit,
+  canManageCategories,
 }: ClientesContainerProps) {
   const [showEditarModal, setShowEditarModal] = useState(false)
 
   const handleEditarCliente = (cliente: Cliente) => {
+    if (!canCreateEdit) {
+      alert("No tienes permisos para editar clientes")
+      return
+    }
     iniciarEdicion(cliente)
     setShowEditarModal(true)
   }
@@ -81,21 +89,23 @@ export default function ClientesContainer({
           <div className="card-custom p-4 mb-4">
             <div className="d-flex flex-wrap align-items-center justify-content-between gap-3">
               <div className="d-flex align-items-center gap-3">
-                <button
-                  className="btn d-flex align-items-center"
-                  style={{
-                    backgroundColor: "var(--primary-green)",
-                    color: "white",
-                    border: "none",
-                    padding: "0.75rem 1.5rem",
-                    borderRadius: "var(--radius)",
-                  }}
-                  onClick={handleOpenModal}
-                  aria-label="Agregar Cliente"
-                >
-                  <i className="bi bi-plus-circle me-2"></i>
-                  Agregar Cliente
-                </button>
+                {canCreateEdit && (
+                  <button
+                    className="btn d-flex align-items-center"
+                    style={{
+                      backgroundColor: "var(--primary-green)",
+                      color: "white",
+                      border: "none",
+                      padding: "0.75rem 1.5rem",
+                      borderRadius: "var(--radius)",
+                    }}
+                    onClick={handleOpenModal}
+                    aria-label="Agregar Cliente"
+                  >
+                    <i className="bi bi-plus-circle me-2"></i>
+                    Agregar Cliente
+                  </button>
+                )}
                 <button
                   className="btn d-flex align-items-center"
                   style={{
@@ -112,89 +122,36 @@ export default function ClientesContainer({
                   Limpiar Filtros
                 </button>
               </div>
-
-              <div className="d-flex align-items-center gap-3">
-                <button
-                  className="btn d-flex align-items-center"
-                  style={{
-                    backgroundColor: "var(--accent-magenta)",
-                    color: "white",
-                    border: "none",
-                    padding: "0.75rem 1.5rem",
-                    borderRadius: "var(--radius)",
-                  }}
-                  onClick={() => {
-                    // Funcionalidad de Excel pendiente
-                    console.log("Exportar a Excel")
-                  }}
-                  aria-label="Exportar a Excel"
-                >
-                  <i className="bi bi-file-earmark-spreadsheet me-2"></i>
-                  Excel
-                </button>
-                <button
-                  className="btn d-flex align-items-center"
-                  style={{
-                    backgroundColor: "var(--accent-blue-gray)",
-                    color: "white",
-                    border: "none",
-                    padding: "0.75rem 1.5rem",
-                    borderRadius: "var(--radius)",
-                  }}
-                  onClick={() => {
-                    // Funcionalidad de Nueva Ruta pendiente
-                    console.log("Nueva Ruta")
-                  }}
-                  aria-label="Nueva Ruta"
-                >
-                  <i className="bi bi-geo-alt me-2"></i>
-                  Nueva Ruta
-                </button>
-                <button
-                  className="btn d-flex align-items-center"
-                  style={{
-                    backgroundColor: "var(--secondary-text)",
-                    color: "white",
-                    border: "none",
-                    padding: "0.75rem 1.5rem",
-                    borderRadius: "var(--radius)",
-                  }}
-                  onClick={() => {
-                    // Funcionalidad de Historial pendiente
-                    console.log("Historial")
-                  }}
-                  aria-label="Historial de Rutas"
-                >
-                  <i className="bi bi-clock-history me-2"></i>
-                  Historial
-                </button>
-              </div>
             </div>
           </div>
 
-          <ClienteForm
-            show={showModal}
-            onHide={() => setShowModal(false)}
-            nuevoCliente={nuevoCliente}
-            setNuevoCliente={setNuevoCliente}
-            onCreateCliente={onCreateCliente}
-            gestionFields={gestionFields}
-            handleCrearCategoria={onCrearCategoria}
-            handleEditarCategoria={onEditarCategoria}
-            handleEliminarCategoria={onEliminarCategoria}
-          />
-          {clienteEditando && (
+          {canCreateEdit && (
+            <ClienteForm
+              show={showModal}
+              onHide={() => setShowModal(false)}
+              nuevoCliente={nuevoCliente}
+              setNuevoCliente={setNuevoCliente}
+              onCreateCliente={onCreateCliente}
+              gestionFields={gestionFields}
+              handleCrearCategoria={canManageCategories ? onCrearCategoria : async () => {}}
+              handleEditarCategoria={canManageCategories ? onEditarCategoria : async () => {}}
+              handleEliminarCategoria={canManageCategories ? onEliminarCategoria : async () => {}}
+            />
+          )}
+
+          {clienteEditando && canCreateEdit && (
             <ClienteEditForm
               show={showEditarModal}
               onHide={handleCloseEditarModal}
               cliente={clienteEditando}
               onActualizarCliente={handleActualizarCliente}
               gestionFields={gestionFields}
-              handleCrearCategoria={onCrearCategoria}
-              handleEditarCategoria={onEditarCategoria}
-              handleEliminarCategoria={onEliminarCategoria}
+              handleCrearCategoria={canManageCategories ? onCrearCategoria : async () => {}}
+              handleEditarCategoria={canManageCategories ? onEditarCategoria : async () => {}}
+              handleEliminarCategoria={canManageCategories ? onEliminarCategoria : async () => {}}
             />
           )}
+
           <ClienteTable
             clientes={clientes}
             onEliminarCliente={onEliminarCliente}
@@ -210,6 +167,7 @@ export default function ClientesContainer({
               onFiltroChange(columna, valor, checked)
             }}
             getUniqueValues={getUniqueValues}
+            canCreateEdit={canCreateEdit}
           />
         </>
       )}

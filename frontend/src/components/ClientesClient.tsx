@@ -1,12 +1,15 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState } from "react"
 import ClientesContainer from "./ClientesContainer"
 import useClientes from "../hooks/useClientes"
+import { useAuthContext } from "../contexts/AuthContext"
+import { RolUsuario } from "../types"
 import type { Cliente } from "../types"
 import type { ColumnasFiltrables } from "../types"
 
 export default function ClientesClient() {
+  const { usuario, hasPermission } = useAuthContext()
   const {
     clientes,
     gestionFields,
@@ -31,9 +34,17 @@ export default function ClientesClient() {
   } = useClientes()
 
   const [showModal, setShowModal] = useState(false)
-  const [clientesFiltrados, setClientesFiltrados] = useState<Cliente[]>(clientes)
+
+  // Verificar permisos - TODOS pueden ver, solo OPERADOR y ADMIN pueden crear/editar
+  const canView = hasPermission([RolUsuario.ADMIN, RolUsuario.OPERADOR, RolUsuario.LECTOR])
+  const canCreateEdit = hasPermission([RolUsuario.ADMIN, RolUsuario.OPERADOR])
+  const canManageCategories = hasPermission([RolUsuario.ADMIN])
 
   const handleOpenModal = () => {
+    if (!canCreateEdit) {
+      alert("No tienes permisos para crear clientes")
+      return
+    }
     iniciarCreacion()
     setShowModal(true)
   }
@@ -81,59 +92,21 @@ export default function ClientesClient() {
     }
   }
 
-  // Add this function to calculate filtered clients
-  const calcularClientesFiltrados = useCallback(() => {
-    let resultado = [...clientes]
-
-    // Apply categorical filters
-    Object.entries(filtros).forEach(([columna, valores]) => {
-      if (valores instanceof Set && valores.size > 0) {
-        resultado = resultado.filter((cliente) => valores.has(String(cliente[columna as keyof Cliente])))
-      } else if (valores && typeof valores === "object" && "desde" in valores) {
-        // Handle date filters
-        const { desde, hasta } = valores as { desde: string; hasta: string }
-        if (desde || hasta) {
-          resultado = resultado.filter((cliente) => {
-            const fechaCliente = cliente[columna as keyof Cliente] as string
-            if (!fechaCliente) return false
-
-            const [day, month, year] = fechaCliente.split("/")
-            const fechaClienteObj = new Date(Number.parseInt(year), Number.parseInt(month) - 1, Number.parseInt(day))
-
-            if (desde) {
-              const [dayDesde, monthDesde, yearDesde] = desde.split("/")
-              const fechaDesde = new Date(
-                Number.parseInt(yearDesde),
-                Number.parseInt(monthDesde) - 1,
-                Number.parseInt(dayDesde),
-              )
-              if (fechaClienteObj < fechaDesde) return false
-            }
-
-            if (hasta) {
-              const [dayHasta, monthHasta, yearHasta] = hasta.split("/")
-              const fechaHasta = new Date(
-                Number.parseInt(yearHasta),
-                Number.parseInt(monthHasta) - 1,
-                Number.parseInt(dayHasta),
-              )
-              if (fechaClienteObj > fechaHasta) return false
-            }
-
-            return true
-          })
-        }
-      }
-    })
-
-    return resultado
-  }, [clientes, filtros])
-
-  // Add useEffect to update filtered clients when clientes or filtros change
-  useEffect(() => {
-    const filtrados = calcularClientesFiltrados()
-    setClientesFiltrados(filtrados)
-  }, [calcularClientesFiltrados])
+  // Si el usuario no tiene permisos para ver, mostrar mensaje
+  if (!canView) {
+    return (
+      <div className="container py-5">
+        <div className="row justify-content-center">
+          <div className="col-md-6">
+            <div className="card-custom p-4 shadow text-center">
+              <h2 className="mb-4 text-danger">Acceso Denegado</h2>
+              <p className="mb-4">No tienes permisos para acceder a esta sección.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div
@@ -152,8 +125,30 @@ export default function ClientesClient() {
               Gestión de Clientes
             </h2>
             <p className="mb-0" style={{ color: "var(--secondary-text)" }}>
-              Administra y gestiona tu cartera de clientes de manera eficiente
+              {canCreateEdit
+                ? "Administra y gestiona tu cartera de clientes de manera eficiente"
+                : "Visualiza y filtra la información de clientes"}
             </p>
+            {usuario && (
+              <div className="mt-2">
+                <span className="badge" style={{ backgroundColor: "var(--accent-cyan)", color: "white" }}>
+                  <i className="bi bi-person-badge me-1"></i>
+                  {usuario.nombre} - {usuario.rol}
+                </span>
+                {canCreateEdit && (
+                  <span className="badge ms-2" style={{ backgroundColor: "var(--accent-magenta)", color: "white" }}>
+                    <i className="bi bi-pencil-square me-1"></i>
+                    Permisos de edición
+                  </span>
+                )}
+                {canManageCategories && (
+                  <span className="badge ms-2" style={{ backgroundColor: "var(--primary-green)", color: "white" }}>
+                    <i className="bi bi-gear me-1"></i>
+                    Gestión de categorías
+                  </span>
+                )}
+              </div>
+            )}
           </div>
           <div className="d-flex align-items-center gap-3">
             <div
@@ -193,7 +188,7 @@ export default function ClientesClient() {
                     <i className="bi bi-people-fill fs-4"></i>
                   </div>
                   <div className="text-start">
-                    <h3 className="mb-0 fw-bold">{clientesFiltrados.length}</h3>
+                    <h3 className="mb-0 fw-bold">{clientes.length}</h3>
                     <small className="opacity-90">Total</small>
                   </div>
                 </div>
@@ -225,7 +220,7 @@ export default function ClientesClient() {
                   </div>
                   <div className="text-start">
                     <h3 className="mb-0 fw-bold">
-                      {clientesFiltrados.filter((c) => c.prioridad === "Pidio turno").length}
+                      {clientes.filter((c) => (c.prioridad || "").toUpperCase() === "PIDIO TURNO").length}
                     </h3>
                     <small className="opacity-90">Pidieron</small>
                   </div>
@@ -258,7 +253,7 @@ export default function ClientesClient() {
                   </div>
                   <div className="text-start">
                     <h3 className="mb-0 fw-bold">
-                      {clientesFiltrados.filter((c) => c.estadoTurno === "Confirmado").length}
+                      {clientes.filter((c) => (c.estadoTurno || "").toUpperCase() === "CONFIRMADO").length}
                     </h3>
                     <small className="opacity-90">Confirmados</small>
                   </div>
@@ -290,7 +285,9 @@ export default function ClientesClient() {
                     <i className="bi bi-graph-up fs-4"></i>
                   </div>
                   <div className="text-start">
-                    <h3 className="mb-0 fw-bold">{clientesFiltrados.filter((c) => c.estado === "Activo").length}</h3>
+                    <h3 className="mb-0 fw-bold">
+                      {clientes.filter((c) => (c.estado || "").toUpperCase() === "ACTIVO").length}
+                    </h3>
                     <small className="opacity-90">Activos</small>
                   </div>
                 </div>
@@ -316,23 +313,26 @@ export default function ClientesClient() {
               <div className="flex-grow-1">
                 <strong>Resumen de gestión:</strong>
                 <span className="ms-2">
-                  {clientesFiltrados.filter((c) => c.prioridad === "Pidio turno").length > 0 && (
+                  {clientes.filter((c) => (c.prioridad || "").toUpperCase() === "PIDIO TURNO").length > 0 && (
                     <span className="me-3">
                       <i className="bi bi-calendar-event me-1" style={{ color: "var(--accent-magenta)" }}></i>
-                      {clientesFiltrados.filter((c) => c.prioridad === "Pidio turno").length} solicitudes pendientes
+                      {clientes.filter((c) => (c.prioridad || "").toUpperCase() === "PIDIO TURNO").length} solicitudes
+                      pendientes
                     </span>
                   )}
-                  {clientesFiltrados.filter((c) => c.estadoTurno === "Confirmado").length > 0 && (
+                  {clientes.filter((c) => (c.estadoTurno || "").toUpperCase() === "CONFIRMADO").length > 0 && (
                     <span className="me-3">
                       <i className="bi bi-check-circle me-1" style={{ color: "var(--accent-cyan)" }}></i>
-                      {clientesFiltrados.filter((c) => c.estadoTurno === "Confirmado").length} turnos programados
+                      {clientes.filter((c) => (c.estadoTurno || "").toUpperCase() === "CONFIRMADO").length} turnos
+                      programados
                     </span>
                   )}
                   <span>
                     <i></i>
-                    {clientesFiltrados.length > 0
+                    {clientes.length > 0
                       ? Math.round(
-                          (clientesFiltrados.filter((c) => c.estado === "Activo").length / clientesFiltrados.length) *
+                          (clientes.filter((c) => (c.estado || "").toUpperCase() === "ACTIVO").length /
+                            clientes.length) *
                             100,
                         )
                       : 0}
@@ -355,9 +355,9 @@ export default function ClientesClient() {
         setShowModal={setShowModal}
         onCreateCliente={onCreateCliente}
         onEliminarCliente={handleEliminarCliente}
-        onCrearCategoria={handleCrearCategoria}
-        onEditarCategoria={handleEditarCategoria}
-        onEliminarCategoria={handleEliminarCategoria}
+        onCrearCategoria={canManageCategories ? handleCrearCategoria : async () => {}}
+        onEditarCategoria={canManageCategories ? handleEditarCategoria : async () => {}}
+        onEliminarCategoria={canManageCategories ? handleEliminarCategoria : async () => {}}
         filtros={filtros}
         onFiltroChange={onFiltroChange}
         onLimpiarFiltros={limpiarTodosLosFiltros}
@@ -372,6 +372,8 @@ export default function ClientesClient() {
         cancelarEdicion={cancelarEdicion}
         clienteEditando={clienteEditando}
         handleOpenModal={handleOpenModal}
+        canCreateEdit={canCreateEdit}
+        canManageCategories={canManageCategories}
       />
     </div>
   )

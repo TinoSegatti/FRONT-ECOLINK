@@ -25,7 +25,7 @@
     "axios": "^1.9.0",
     "axobject-query": "^4.1.0",
     "balanced-match": "^1.0.2",
-    "bootstrap": "^5.3.3",
+    "bootstrap": "^5.3.6",
     "bootstrap-icons": "^1.11.3",
     "brace-expansion": "^1.1.11",
     "braces": "^3.0.3",
@@ -271,6 +271,7 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@types/bootstrap": "^5.2.10",
     "@types/lodash.debounce": "^4.0.9",
     "@types/node": "22.13.10",
     "@types/react": "19.0.10",

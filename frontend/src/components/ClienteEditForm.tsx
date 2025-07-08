@@ -59,7 +59,6 @@ export default function ClienteEditForm({
     precio: cliente.precio ?? null,
     ultimaRecoleccion: cliente.ultimaRecoleccion ?? null,
     contratacion: cliente.contratacion ?? null,
-    nuevo: cliente.nuevo ?? false,
     estadoTurno: cliente.estadoTurno ?? null,
     prioridad: cliente.prioridad ?? null,
     estado: cliente.estado ?? null,
@@ -161,7 +160,7 @@ export default function ClienteEditForm({
       precio: cliente.precio ?? null,
       ultimaRecoleccion: cliente.ultimaRecoleccion ?? null,
       contratacion: cliente.contratacion ?? null,
-      nuevo: cliente.nuevo ?? false,
+     
       estadoTurno: cliente.estadoTurno ?? null,
       prioridad: cliente.prioridad ?? null,
       estado: cliente.estado ?? null,
@@ -724,34 +723,7 @@ export default function ClienteEditForm({
                   )}
                 </Form.Group>
               </Col>
-              <Col md={4}>
-                <Form.Group controlId="nuevo">
-                  <Form.Label className="form-label-custom">
-                    <i className="bi bi-star me-1" style={{ color: "var(--accent-cyan)" }}></i>
-                    Nuevo
-                  </Form.Label>
-                  <Form.Select
-                    value={formData.nuevo ? "true" : "false"}
-                    onChange={(e) => setFormData({ ...formData, nuevo: e.target.value === "true" })}
-                    name="nuevo"
-                    aria-describedby="nuevo-desc"
-                    isInvalid={!!errors.nuevo}
-                    className="form-control-custom"
-                  >
-                    <option value="true">Sí</option>
-                    <option value="false">No</option>
-                  </Form.Select>
-                  <Form.Text id="nuevo-desc" className="form-text-custom">
-                    Indica si es un cliente nuevo.
-                  </Form.Text>
-                  {errors.nuevo && (
-                    <div className="text-danger" style={{ fontSize: "0.875rem", marginTop: "0.25rem" }}>
-                      <i className="bi bi-exclamation-circle me-1"></i>
-                      {errors.nuevo}
-                    </div>
-                  )}
-                </Form.Group>
-              </Col>
+             
               <Col md={4}>
                 <CategoriasGestionables
                   field="estadoTurno"

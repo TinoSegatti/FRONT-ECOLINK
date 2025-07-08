@@ -6,7 +6,7 @@ const nextConfig = {
     return [
       {
         source: '/api/auth/:path*',
-        destination: `${process.env.NEXT_PUBLIC_DEFAULT_URL}/api/auth/:path*`, // CORRECCIÓN: /api/auth -> /api/auth
+        destination: `${process.env.NEXT_PUBLIC_DEFAULT_URL || 'https://back-ecolink-3.onrender.com'}/api/auth/:path*`, // CORRECCIÓN: /api/auth -> /api/auth
       },
     ]
   },

@@ -2,7 +2,7 @@
 import { z } from "zod"
 import { RolUsuario, type Usuario, type SolicitudRegistro } from "../../types"
 
-const BASE_URL = process.env.NEXT_PUBLIC_DEFAULT_URL //|| "http://localhost:3000"
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"
 const API_URL = `${BASE_URL}/api`
 
 // Esquemas Zod para validación

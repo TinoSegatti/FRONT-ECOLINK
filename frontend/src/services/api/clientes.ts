@@ -61,7 +61,7 @@ const CategoriaSchema = z.object({
 const CategoriaResponseSchema = z.union([CategoriaSchema, z.void()])
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://back-ecolink-3.onrender.com";
-const API_URL = `${BASE_URL}/api/v1`;
+const API_URL = `${BASE_URL}/api`;
 
 
 // Función para obtener headers con autenticación

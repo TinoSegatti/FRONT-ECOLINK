@@ -11,7 +11,7 @@ export default function ActionButtons({ onRegistrarClick, onLimpiarClick }: Acti
     return (
         <div className="d-flex justify-content-between mb-3">
         <button
-            className="btn btn-success"
+            className="btn btn-primary-green"
             onClick={onRegistrarClick}
             aria-label="Registrar un nuevo cliente"
         >

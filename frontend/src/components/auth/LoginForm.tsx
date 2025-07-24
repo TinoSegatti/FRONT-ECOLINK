@@ -50,7 +50,7 @@ export default function LoginForm() {
   const isEmailNotVerified = error?.includes("verificar tu correo electrónico")
 
   return (
-    <div className="card p-4 shadow">
+    <div className="card p-4 shadow" style={{ backgroundColor: 'var(--card-background)', color: 'var(--foreground)' }}>
       <h2 className="text-center mb-4">
         {showResetForm ? "Restablecer Contraseña" : "Iniciar Sesión"}
       </h2>
@@ -107,9 +107,8 @@ export default function LoginForm() {
           <div className="d-grid gap-2">
             <button
               type="submit"
-              className="btn btn-success"
+              className="btn btn-primary-green"
               disabled={isLoading}
-              style={{ backgroundColor: "#7ac943", borderColor: "#7ac943" }}
             >
               {isLoading ? "Iniciando sesión..." : "Iniciar Sesión"}
             </button>
@@ -166,7 +165,7 @@ export default function LoginForm() {
           <>
             <p>
               ¿No tienes una cuenta?{" "}
-              <Link href="/registro" style={{ color: "#7ac943" }}>
+              <Link href="/registro" className="text-primary-green">
                 Solicitar registro
               </Link>
             </p>

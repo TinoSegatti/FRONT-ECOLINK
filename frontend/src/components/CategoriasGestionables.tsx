@@ -242,7 +242,7 @@ export default function CategoriasGestionables({
                   aria-describedby={`${field}-desc`}
                 />
                 <Button
-                  variant="primary"
+                  variant="primary-green"
                   onClick={handleSave}
                   disabled={!nuevaCategoria}
                   aria-label={editValor !== null ? "Guardar edición" : "Agregar categoría"}
@@ -252,7 +252,7 @@ export default function CategoriasGestionables({
               </InputGroup>
               <div className="mt-3">
                 <Button
-                  variant="outline-secondary"
+                  variant="secondary"
                   onClick={() => setShowColorPicker(!showColorPicker)}
                   aria-label="Seleccionar color"
                 >
@@ -294,7 +294,7 @@ export default function CategoriasGestionables({
                   </div>
                   <div>
                     <Button
-                      variant="outline-primary"
+                      variant="outline-primary-green"
                       size="sm"
                       className="me-2"
                       onClick={() => handleEditar(option)}

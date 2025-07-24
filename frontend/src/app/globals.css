@@ -12,6 +12,14 @@
   --accent-magenta: #e83e8c;
   --accent-blue-gray: #6f42c1;
   --radius: 0.375rem;
+  --input-background: #fff;
+  --input-foreground: #212529;
+  --input-border: #dee2e6;
+  --modal-backdrop: rgba(0,0,0,0.5);
+  --alert-danger-bg: #f8d7da;
+  --alert-danger-color: #721c24;
+  --alert-success-bg: #d4edda;
+  --alert-success-color: #155724;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -24,6 +32,14 @@
     --border-color: #3a3b3c;
     --muted: #23272f;
     --accent-magenta: #ff6ec7;
+    --input-background: #23272f;
+    --input-foreground: #e4e6eb;
+    --input-border: #3a3b3c;
+    --modal-backdrop: rgba(0,0,0,0.8);
+    --alert-danger-bg: #3a2327;
+    --alert-danger-color: #ffb3c1;
+    --alert-success-bg: #233a27;
+    --alert-success-color: #b3ffd1;
   }
 }
 
@@ -200,4 +216,78 @@ body.modal-open {
   background-color: var(--card-background);
   color: var(--foreground);
   border-color: var(--border-color);
+}
+
+/* Inputs y selects */
+.form-control, .form-select {
+  background-color: var(--input-background);
+  color: var(--input-foreground);
+  border-color: var(--input-border);
+}
+.form-control:focus, .form-select:focus {
+  border-color: var(--primary-green);
+  box-shadow: 0 0 0 0.2rem rgba(122, 201, 67, 0.25);
+  background-color: var(--input-background);
+  color: var(--input-foreground);
+}
+
+/* Alertas */
+.alert-danger {
+  background-color: var(--alert-danger-bg);
+  color: var(--alert-danger-color);
+  border-color: var(--alert-danger-bg);
+}
+.alert-success {
+  background-color: var(--alert-success-bg);
+  color: var(--alert-success-color);
+  border-color: var(--alert-success-bg);
+}
+
+/* Modales */
+.modal-content {
+  background-color: var(--card-background);
+  color: var(--foreground);
+}
+.modal-header, .modal-footer {
+  background-color: var(--background);
+  color: var(--foreground);
+  border-color: var(--border-color);
+}
+.modal-backdrop {
+  background-color: var(--modal-backdrop) !important;
+}
+
+/* Botones */
+.btn-primary-green {
+  background-color: var(--primary-green);
+  border-color: var(--primary-green);
+  color: white;
+}
+.btn-primary-green:hover, .btn-primary-green:focus {
+  background-color: #6ba83a;
+  border-color: #6ba83a;
+  color: white;
+}
+.btn-secondary, .btn-outline-secondary {
+  background-color: transparent;
+  color: var(--foreground);
+  border-color: var(--border-color);
+}
+.btn-secondary:hover, .btn-outline-secondary:hover {
+  background-color: var(--muted);
+  color: var(--foreground);
+}
+
+/* Dropdowns */
+.dropdown-menu {
+  background-color: var(--card-background);
+  color: var(--foreground);
+  border-color: var(--border-color);
+}
+.dropdown-item {
+  color: var(--foreground);
+}
+.dropdown-item:hover, .dropdown-item:focus {
+  background-color: var(--muted);
+  color: var(--foreground);
 }

@@ -8,7 +8,7 @@ export default function Navbar() {
   const { isAuthenticated, usuario, logout } = useAuthContext()
 
   return (
-    <nav className="navbar navbar-expand-lg navbar-dark bg-primary-green">
+    <nav className="navbar navbar-expand-lg" style={{ backgroundColor: 'var(--card-background)', color: 'var(--foreground)' }}>
       <div className="container-fluid">
         <Link href="/clientes" className="navbar-brand fw-bold">
           <i className="bi bi-recycle me-2"></i>
@@ -55,11 +55,12 @@ export default function Navbar() {
                   id="userDropdown"
                   data-bs-toggle="dropdown"
                   aria-expanded="false"
+                  style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)', backgroundColor: 'var(--card-background)' }}
                 >
                   <i className="bi bi-person-circle me-1"></i>
                   {usuario?.nombre || "Usuario"}
                 </button>
-                <ul className="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                <ul className="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown" style={{ backgroundColor: 'var(--card-background)', color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>
                   <li>
                     <div className="dropdown-item-text">
                       <small className="text-muted">Rol: {usuario?.rol}</small>

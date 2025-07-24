@@ -47,7 +47,7 @@ export default function RegistroForm() {
   }
 
   return (
-    <div className="card p-4 shadow">
+    <div className="card p-4 shadow" style={{ backgroundColor: 'var(--card-background)', color: 'var(--foreground)' }}>
       <h2 className="text-center mb-4">Solicitar Registro</h2>
       {error && (
         <div className="alert alert-danger" role="alert">
@@ -125,8 +125,7 @@ export default function RegistroForm() {
         <div className="d-grid gap-2">
           <button
             type="submit"
-            className="btn"
-            style={{ backgroundColor: "#7ac943", borderColor: "#7ac943", color: "white" }}
+            className="btn btn-primary-green"
             disabled={isLoading || !!success}
           >
             {isLoading ? "Enviando solicitud..." : "Solicitar Registro"}
@@ -136,7 +135,7 @@ export default function RegistroForm() {
       <div className="mt-3 text-center">
         <p>
           ¿Ya tienes una cuenta?{" "}
-          <Link href="/login" style={{ color: "#7ac943" }}>
+          <Link href="/login" className="text-primary-green">
             Iniciar sesión
           </Link>
         </p>
